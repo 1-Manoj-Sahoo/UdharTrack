@@ -135,10 +135,23 @@
                 <div class="modal-header bg-light"><h5 id="detName" class="fw-bold">Name</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <div class="row text-center mb-3">
-                        <div class="col-4 border-end"><h6>Principal</h6><h5 id="detPrin" class="text-primary money-font">0</h5></div>
-                        <div class="col-4 border-end"><h6>Time</h6><h6 id="detTime" class="small">0 Mon, 0 Day</h6></div>
-                        <div class="col-4"><h6>Interest Due</h6><h5 id="detInt" class="text-danger money-font">0</h5></div>
-                    </div>
+						<div class="col-3 border-end">
+							<h6 class="small fw-bold">Start Date</h6>
+							<h6 id="detStartDate" class="text-secondary small">--/--/--</h6>
+						</div>
+						<div class="col-3 border-end">
+							<h6 class="small fw-bold">Principal</h6>
+							<h5 id="detPrin" class="text-primary money-font mb-0" style="font-size: 1.1rem;">0</h5>
+						</div>
+						<div class="col-3 border-end">
+							<h6 class="small fw-bold">Time</h6>
+							<h6 id="detTime" class="small mb-0">0 Mon, 0 Day</h6>
+						</div>
+						<div class="col-3">
+							<h6 class="small fw-bold">Interest</h6>
+							<h5 id="detInt" class="text-danger money-font mb-0" style="font-size: 1.1rem;">0</h5>
+						</div>
+					</div>
                     <div class="alert alert-dark text-center py-2 mb-3">
                         <small>TOTAL OUTSTANDING:</small>
                         <h3 id="detTotal" class="fw-bold mb-0">0</h3>
@@ -348,6 +361,7 @@
             if(!rec) return;
             const c = getCalc(rec);
             document.getElementById('detName').innerText = rec.name;
+			document.getElementById('detStartDate').innerText = rec.date;
             document.getElementById('detPrin').innerText = rec.amount;
             document.getElementById('detTime').innerText = c.timeText;
             document.getElementById('detInt').innerText = c.interest;
