@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LendBorrow Ledger</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --primary: #4e73df; --success: #1cc88a; --danger: #e74a3b; }
+        body { background-color: #f4f7fe; font-family: 'Segoe UI', Roboto, sans-serif; }
+        .auth-card { max-width: 400px; margin: 80px auto; padding: 2rem; background: #fff; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .app-header { background: var(--primary); color: white; padding: 15px 20px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .hidden { display: none !important; }
+        .stat-card { border: none; border-radius: 12px; color: white; transition: 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .bg-lend { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); }
+        .bg-borrow { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%); }
+        .bg-total { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
+        .customer-item { cursor: pointer; border-left: 5px solid var(--primary); margin-bottom: 12px; background: white; border-radius: 8px; transition: 0.2s; }
+        .customer-item:hover { background: #f8f9fc; }
+        .history-box { max-height: 200px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
+        .money-font { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="authSection">
+        <div class="auth-card">
+            <h3 class="text-center fw-bold mb-4" id="authTitle">Login</h3>
+            <form id="authForm">
+                <div id="signupFields" class="hidden">
+                    <div class="mb-3"><input type="text" id="regName" class="form-control" placeholder="Full Name"></div>
+                    <div class="mb-3"><input type="tel" id="regPhone" class="form-control" placeholder="Phone Number"></div>
+                </div>
+                <div class="mb-3"><input type="email" id="authEmail" class="form-control" placeholder="Email" required></div>
+                <div class="mb-3"><input type="password" id="authPass" class="form-control" placeholder="Password" required></div>
+                <div id="signupConfirm" class="hidden mb-3">
+                    <input type="password" id="authPassConfirm" class="form-control" placeholder="Confirm Password">
+                </div>
+                <button type="submit" class="btn btn-primary w-100 fw-bold" id="authBtn">Login</button>
+            </form>
+            <p class="text-center mt-3 mb-0">
+                <a href="#" id="toggleAuth" class="text-decoration-none">Create an account</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="appSection" class="hidden">
+        <header class="app-header d-flex justify-content-between align-items-center">
+            <button class="btn text-white p-0" onclick="showDashboard()"><i class="fas fa-home fa-lg"></i></button>
+            <div id="headerUserName" class="fw-bold fs-5">User</div>
+            <button class="btn btn-sm btn-outline-light" id="logoutBtn">LOGOUT</button>
+        </header>
+
+        <div id="dashboardView" class="container mt-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card stat-card bg-lend p-3">
+                        <h6>Total Lending</h6>
+                        <h2 id="dashLendAmt">0</h2>
+                        <small>Interest: <span id="dashLendInt">0</span></small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-borrow p-3">
+                        <h6>Total Borrowing</h6>
+                        <h2 id="dashBorrowAmt">0</h2>
+                        <small>Interest: <span id="dashBorrowInt">0</span></small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-total p-3">
+                        <h6>Total Customers</h6>
+                        <h2 id="dashTotalCust">0</h2>
+                        <small>Active Records</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-5">
+                <div class="col-6">
+                    <button class="btn btn-outline-success w-100 py-4 shadow-sm fw-bold" onclick="openList('lend')">
+                        <i class="fas fa-hand-holding-usd fa-2x d-block mb-2"></i> LEND MONEY
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-outline-danger w-100 py-4 shadow-sm fw-bold" onclick="openList('borrow')">
+                        <i class="fas fa-hand-holding fa-2x d-block mb-2"></i> BORROW MONEY
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="listView" class="container mt-4 hidden">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 id="listTitle" class="fw-bold m-0">Lending</h4>
+                <button class="btn btn-primary btn-sm px-3" onclick="openAddModal()">+ ADD NEW</button>
+            </div>
+            
+            <div class="input-group mb-3 shadow-sm">
+                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search customer name...">
+            </div>
+
+            <div id="customerList" class="pb-5"></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Add New Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="addForm">
+                        <div class="mb-2"><label class="small fw-bold">Name</label><input type="text" id="addName" class="form-control" required></div>
+                        <div class="mb-2"><label class="small fw-bold">Phone</label><input type="tel" id="addPhone" class="form-control" required></div>
+                        <div class="row g-2">
+                            <div class="col-6"><label class="small fw-bold">Amount</label><input type="number" id="addAmount" class="form-control" required></div>
+                            <div class="col-6"><label class="small fw-bold">Rate % (Monthly)</label><input type="number" step="0.1" id="addRate" class="form-control" value="3" required></div>
+                        </div>
+                        <div class="mt-2"><label class="small fw-bold">Starting Date</label><input type="date" id="addDate" class="form-control" required></div>
+                        <div id="addPreview" class="alert alert-secondary py-1 mt-2 small text-center">Preview: 30 / Month</div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary w-100" onclick="saveCustomer()">SAVE</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light"><h5 id="detName" class="fw-bold">Name</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-4 border-end"><h6>Principal</h6><h5 id="detPrin" class="text-primary money-font">0</h5></div>
+                        <div class="col-4 border-end"><h6>Time</h6><h6 id="detTime" class="small">0 Mon, 0 Day</h6></div>
+                        <div class="col-4"><h6>Interest Due</h6><h5 id="detInt" class="text-danger money-font">0</h5></div>
+                    </div>
+                    <div class="alert alert-dark text-center py-2 mb-3">
+                        <small>TOTAL OUTSTANDING:</small>
+                        <h3 id="detTotal" class="fw-bold mb-0">0</h3>
+                    </div>
+
+                    <h6 class="fw-bold small text-muted text-uppercase">Payment History</h6>
+                    <div id="historyList" class="history-box mb-3"><div class="text-center text-muted small">No history</div></div>
+
+                    <hr>
+                    <h6 class="fw-bold mb-2">New Payment Update</h6>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="small">Date</label>
+                            <input type="date" id="updDate" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small">Type</label>
+                            <select id="updType" class="form-select">
+                                <option value="interest">Interest Only</option>
+                                <option value="principal">Principal (Deduct)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small">Amount</label>
+                            <input type="number" id="updAmt" class="form-control" placeholder="0">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-success w-100" onclick="handleUpdate()">SAVE</button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-outline-warning btn-sm flex-fill" onclick="clearInterestOnly()">Clear All Interest</button>
+                        <button class="btn btn-outline-danger btn-sm flex-fill" onclick="clearTotalAmount()">Full Settle & Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGNmRpsBLrHBOsTDVh2MzimYGW38w4G8o",
+  authDomain: "udhartrack.firebaseapp.com",
+  databaseURL: "https://udhartrack-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "udhartrack",
+  storageBucket: "udhartrack.firebasestorage.app",
+  messagingSenderId: "349890803798",
+  appId: "1:349890803798:web:d0093c58cc262099b4a3f7"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let currentUser = null, currentView = 'lend', allData = {}, activeId = null;
+        let addModal, detailModal;
+
+        // AUTH
+        document.getElementById('toggleAuth').onclick = (e) => {
+            e.preventDefault();
+            const isLogin = document.getElementById('authTitle').innerText === 'Login';
+            document.getElementById('authTitle').innerText = isLogin ? 'Sign Up' : 'Login';
+            document.getElementById('authBtn').innerText = isLogin ? 'Register' : 'Login';
+            document.getElementById('signupFields').classList.toggle('hidden');
+            document.getElementById('signupConfirm').classList.toggle('hidden');
+            document.getElementById('toggleAuth').innerText = isLogin ? 'Already have an account? Login' : 'Create an account';
+        };
+
+        document.getElementById('authForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value;
+            const pass = document.getElementById('authPass').value;
+            try {
+                if(document.getElementById('authTitle').innerText === 'Login') {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    const passConf = document.getElementById('authPassConfirm').value;
+                    if(pass !== passConf) throw new Error("Passwords do not match");
+                    const res = await createUserWithEmailAndPassword(auth, email, pass);
+                    await set(ref(db, `users/${res.user.uid}/profile`), {
+                        name: document.getElementById('regName').value,
+                        phone: document.getElementById('regPhone').value
+                    });
+                }
+            } catch(err) { Swal.fire('Error', err.message, 'error'); }
+        };
+
+        document.getElementById('logoutBtn').onclick = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if(!addModal) {
+                addModal = new bootstrap.Modal(document.getElementById('addModal'));
+                detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+            }
+            if(user) {
+                currentUser = user;
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('appSection').classList.remove('hidden');
+                onValue(ref(db, `users/${user.uid}`), (snap) => {
+                    allData = snap.val() || {};
+                    document.getElementById('headerUserName').innerText = allData.profile?.name || user.email.split('@')[0];
+                    renderDashboard();
+                    if(!document.getElementById('listView').classList.contains('hidden')) renderList();
+                    if(activeId) updateDetailView(activeId);
+                });
+            } else {
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('appSection').classList.add('hidden');
+            }
+        });
+
+        // CALCULATION LOGIC
+        function getCalc(rec) {
+            const start = new Date(rec.date);
+            const now = new Date();
+            const days = Math.floor((now - start) / (86400000));
+            const totalIntGenerated = (rec.amount * (rec.interestRate / 100)) * (days / 30);
+            
+            let paidInt = 0;
+            if(rec.history) Object.values(rec.history).forEach(h => { if(h.type === 'interest') paidInt += parseFloat(h.amount); });
+            
+            const remInt = Math.max(0, totalIntGenerated - paidInt);
+            return {
+                interest: Math.round(remInt),
+                total: Math.round(rec.amount + remInt),
+                timeText: `${Math.floor(days/30)} Mon, ${days%30} Days`
+            };
+        }
+
+        // DASHBOARD & LIST
+        function renderDashboard() {
+            let lA = 0, lI = 0, bA = 0, bI = 0, count = 0;
+            if(allData.lend) Object.values(allData.lend).forEach(r => { const c = getCalc(r); lA += r.amount; lI += c.interest; count++; });
+            if(allData.borrow) Object.values(allData.borrow).forEach(r => { const c = getCalc(r); bA += r.amount; bI += c.interest; count++; });
+            document.getElementById('dashLendAmt').innerText = lA;
+            document.getElementById('dashLendInt').innerText = lI;
+            document.getElementById('dashBorrowAmt').innerText = bA;
+            document.getElementById('dashBorrowInt').innerText = bI;
+            document.getElementById('dashTotalCust').innerText = count;
+        }
+
+        window.showDashboard = () => {
+            document.getElementById('dashboardView').classList.remove('hidden');
+            document.getElementById('listView').classList.add('hidden');
+        };
+
+        window.openList = (type) => {
+            currentView = type;
+            document.getElementById('listTitle').innerText = type === 'lend' ? 'Lending List' : 'Borrowing List';
+            document.getElementById('dashboardView').classList.add('hidden');
+            document.getElementById('listView').classList.remove('hidden');
+            renderList();
+        };
+
+        function renderList() {
+            const list = document.getElementById('customerList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            list.innerHTML = "";
+            const records = allData[currentView] || {};
+            Object.entries(records).forEach(([id, rec]) => {
+                if(rec.name.toLowerCase().includes(search)) {
+                    const c = getCalc(rec);
+                    list.innerHTML += `<div class="customer-item p-3 shadow-sm" onclick="openDetails('${id}')">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><h6 class="mb-0 fw-bold">${rec.name}</h6><small class="text-muted">${rec.phone}</small></div>
+                            <div class="text-end fw-bold text-primary">Total: ${c.total}</div>
+                        </div>
+                    </div>`;
+                }
+            });
+        }
+        document.getElementById('searchInput').onkeyup = renderList;
+
+        // ACTIONS
+        window.openAddModal = () => { 
+            document.getElementById('addForm').reset(); 
+            document.getElementById('addDate').valueAsDate = new Date(); 
+            addModal.show(); 
+        };
+
+        window.saveCustomer = async () => {
+            const form = document.getElementById('addForm');
+            if(!form.checkValidity()) return form.reportValidity();
+            const data = {
+                name: document.getElementById('addName').value,
+                phone: document.getElementById('addPhone').value,
+                amount: parseFloat(document.getElementById('addAmount').value),
+                interestRate: parseFloat(document.getElementById('addRate').value),
+                date: document.getElementById('addDate').value,
+                interestPaid: 0
+            };
+            await push(ref(db, `users/${currentUser.uid}/${currentView}`), data);
+            addModal.hide();
+            Swal.fire({ icon: 'success', title: 'Saved Successfully', timer: 1500, showConfirmButton: false });
+        };
+
+        window.openDetails = (id) => { activeId = id; updateDetailView(id); detailModal.show(); };
+
+        function updateDetailView(id) {
+            const rec = allData[currentView][id];
+            if(!rec) return;
+            const c = getCalc(rec);
+            document.getElementById('detName').innerText = rec.name;
+            document.getElementById('detPrin').innerText = rec.amount;
+            document.getElementById('detTime').innerText = c.timeText;
+            document.getElementById('detInt').innerText = c.interest;
+            document.getElementById('detTotal').innerText = c.total;
+            document.getElementById('updDate').valueAsDate = new Date();
+            
+            const hist = document.getElementById('historyList');
+            hist.innerHTML = "";
+            if(rec.history) {
+                Object.values(rec.history).reverse().forEach(h => {
+                    hist.innerHTML += `<div class="d-flex justify-content-between small border-bottom py-1">
+                        <span>${h.date}</span><span class="${h.type === 'interest' ? 'text-success' : 'text-primary'} fw-bold">${h.type.toUpperCase()}: ${h.amount}</span>
+                    </div>`;
+                });
+            } else { hist.innerHTML = '<div class="text-center text-muted small">No history</div>'; }
+        }
+
+        window.handleUpdate = async () => {
+            const amt = parseFloat(document.getElementById('updAmt').value);
+            const type = document.getElementById('updType').value;
+            const date = document.getElementById('updDate').value;
+            if(!amt || amt <= 0) return;
+            
+            const path = `users/${currentUser.uid}/${currentView}/${activeId}`;
+            const rec = allData[currentView][activeId];
+            
+            if(type === 'principal') {
+                await update(ref(db, path), { amount: rec.amount - amt });
+            }
+            await push(ref(db, `${path}/history`), { amount: amt, type: type, date: date });
+            
+            document.getElementById('updAmt').value = "";
+            Swal.fire({ icon: 'success', title: 'Payment Updated', timer: 1000, showConfirmButton: false });
+        };
+
+        window.clearInterestOnly = () => {
+            Swal.fire({
+                title: 'Clear Interest?',
+                text: "Sets current interest to 0 and resets date to today.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f6c23e',
+                confirmButtonText: 'Clear Interest'
+            }).then(async (res) => {
+                if(res.isConfirmed) {
+                    await update(ref(db, `users/${currentUser.uid}/${currentView}/${activeId}`), {
+                        date: new Date().toISOString().split('T')[0],
+                        history: null // Clearing history reset interest paid to 0 correctly
+                    });
+                    Swal.fire('Cleared!', 'Record reset to today.', 'success');
+                }
+            });
+        };
+
+        window.clearTotalAmount = () => {
+            Swal.fire({
+                title: 'Total Settle?',
+                text: "Delete this record permanently?",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Delete'
+            }).then(async (res) => {
+                if(res.isConfirmed) {
+                    await remove(ref(db, `users/${currentUser.uid}/${currentView}/${activeId}`));
+                    activeId = null;
+                    detailModal.hide();
+                    Swal.fire('Deleted!', 'Record removed.', 'success');
+                }
+            });
+        };
+
+        // Preview interest while adding
+        document.getElementById('addAmount').oninput = () => {
+            const a = document.getElementById('addAmount').value || 0;
+            const r = document.getElementById('addRate').value || 0;
+            document.getElementById('addPreview').innerText = `Preview: ${(a * r / 100).toFixed(2)} / Month`;
+        };
+        document.getElementById('addRate').oninput = document.getElementById('addAmount').oninput;
+
+    </script>
+</body>
+</html>
